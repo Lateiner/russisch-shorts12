@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktive Video-Reaktion</title>
+    <style>
+        :root {
+            --primary: #007bff;
+            --success: #28a745;
+            --danger: #dc3545;
+            --dark: #212529;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px;
+        }
+
+        .video-quiz-container {
+            background: white;
+            max-width: 640px;
+            width: 100%;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .video-viewport {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            background: #000;
+        }
+
+        /* Simuliertes Video-Bild */
+        .video-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
+                        url('https://images.unsplash.com/photo-1554672408-730436b60dde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80');
+            background-size: cover;
+            background-position: center;
+            transition: filter 0.5s;
+        }
+
+        .video-content.paused {
+            filter: blur(5px) grayscale(50%);
+        }
+
+        .play-btn {
+            position: absolute;
+            z-index: 10;
+            padding: 15px 30px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .subtitle-box {
+            position: absolute;
+            bottom: 10%;
+            width: 100%;
+            text-align: center;
+            z-index: 5;
+        }
+
+        .subtitle {
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 1.2rem;
+        }
+
+        /* Quiz Overlay */
+        .quiz-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .quiz-title {
+            color: white;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .option-btn {
+            padding: 12px;
+            border: 2px solid white;
+            background: transparent;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .option-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .option-btn.correct { background-color: var(--success); border-color: var(--success); }
+        .option-btn.wrong { background-color: var(--danger); border-color: var(--danger); }
+
+        .feedback-msg {
+            color: white;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .footer-info {
+            padding: 15px;
+            text-align: center;
+            background: #fff;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        @media (max-width: 480px) {
+            .subtitle { font-size: 1rem; }
+            .play-btn { padding: 10px 20px; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="video-quiz-container">
+    <div class="video-viewport" id="viewport">
+        <div class="video-content" id="video">
+            <button class="play-btn" id="mainPlay" onclick="startVideo()">Szene abspielen ▶</button>
+        </div>
+        
+        <div class="subtitle-box" id="subBox" style="display:none;">
+            <span class="subtitle" id="subText">...</span>
+        </div>
+
+        <div class="quiz-overlay" id="quizOverlay">
+            <div class="quiz-title">Wähle die passende sarkastische Antwort:</div>
+            <div class="options-list">
+                <button class="option-btn" onclick="checkAnswer(this, false)">Хорошо (Gut/Okay)</button>
+                <button class="option-btn" id="correctBtn" onclick="checkAnswer(this, true)">Ага сейчас (Von wegen)</button>
+                <button class="option-btn" onclick="checkAnswer(this, false)">Да, конечно (Ja, natürlich)</button>
+            </div>
+            <div class="feedback-msg" id="feedback"></div>
+            <button class="play-btn" id="restartBtn" style="display:none; margin-top:20px; position:relative;" onclick="location.reload()">Nochmal abspielen</button>
+        </div>
+    </div>
+    <div class="footer-info">
+        <b>Situation:</b> Ein Freund fragt nach Geld. Reagiere ironisch.
+    </div>
+</div>
+
+<script>
+    function startVideo() {
+        const playBtn = document.getElementById('mainPlay');
+        const subBox = document.getElementById('subBox');
+        const subText = document.getElementById('subText');
+        const video = document.getElementById('video');
+        
+        playBtn.style.display = 'none';
+        subBox.style.display = 'block';
+
+        // Phase 1: Begrüßung
+        setTimeout(() => {
+            subText.innerText = "Privet! Hör mal...";
+        }, 500);
+
+        // Phase 2: Die Frage
+        setTimeout(() => {
+            subText.innerText = "Kannst du mir Geld leihen?";
+            subText.style.color = "#ffcc00";
+        }, 2500);
+
+        // Phase 3: Pause & Quiz
+        setTimeout(() => {
+            video.classList.add('paused');
+            document.getElementById('quizOverlay').style.display = 'flex';
+            subBox.style.display = 'none';
+        }, 4500);
+    }
+
+    function checkAnswer(btn, isCorrect) {
+        const feedback = document.getElementById('feedback');
+        const buttons = document.querySelectorAll('.option-btn');
+        
+        buttons.forEach(b => b.style.pointerEvents = 'none');
+        
+        feedback.style.display = 'block';
+        
+        if (isCorrect) {
+            btn.classList.add('correct');
+            feedback.innerHTML = "Richtig! 🙄<br>Damit signalisierst du: 'Träum weiter!'";
+            feedback.style.color = "#4ade80";
+        } else {
+            btn.classList.add('wrong');
+            document.getElementById('correctBtn').classList.add('correct');
+            feedback.innerHTML = "Falsch. Das wäre eine ernstgemeinte Zusage!";
+            feedback.style.color = "#f87171";
+        }
+        
+        document.getElementById('restartBtn').style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
