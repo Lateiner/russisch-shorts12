@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Quiz: Situationsanalyse</title>
+    <style>
+        :root {
+            --primary: #0056b3;
+            --success: #28a745;
+            --error: #dc3545;
+            --bg: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px;
+        }
+
+        .quiz-card {
+            background: white;
+            max-width: 550px;
+            width: 100%;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 25%;
+            transition: width 0.3s ease;
+        }
+
+        .situation-box {
+            background-color: #f8f9fa;
+            border-left: 5px solid var(--primary);
+            padding: 15px;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .russian-quote {
+            font-weight: bold;
+            font-style: normal;
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #dee2e6;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+
+        .option-btn:hover:not(.disabled) {
+            border-color: var(--primary);
+            background-color: #f0f7ff;
+        }
+
+        .disabled { pointer-events: none; }
+        .correct { border-color: var(--success) !important; background-color: #d4edda !important; }
+        .wrong { border-color: var(--error) !important; background-color: #f8d7da !important; }
+
+        .feedback-area {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+            font-weight: 500;
+        }
+
+        .next-btn {
+            display: none;
+            margin-top: 20px;
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-card" id="quiz-content">
+    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+    
+    <div id="question-container">
+        <div class="situation-box" id="situation-text"></div>
+        <h2 id="question-text" style="font-size: 1.1rem;"></h2>
+        <div class="options-list" id="options"></div>
+    </div>
+
+    <div id="feedback" class="feedback-area"></div>
+    <button id="next-btn" class="next-btn" onclick="nextQuestion()">Nächste Situation</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            situation: "Iwan bittet Tanja, den Abwasch zu machen. Tanja antwortet: <span class='russian-quote'>„Ага сейчас.“</span>",
+            question: "Was wird Tanja wahrscheinlich tun?",
+            options: [
+                { text: "Den Abwasch sofort erledigen.", correct: false },
+                { text: "Den Abwasch ignorieren oder sich weigern.", correct: true },
+                { text: "Erst arbeiten und dann abwaschen.", correct: false }
+            ],
+            explanation: "Richtig! 'Ага сейчас' ist hier eine sarkastische Absage."
+        },
+        {
+            situation: "Ein Freund fragt dich: „Leihst du mir 1000 Euro?“ Du antwortest lachend: <span class='russian-quote'>„Ага сейчас!“</span>",
+            question: "Wie ist deine Antwort gemeint?",
+            options: [
+                { text: "Ich gehe kurz zur Bank und hole das Geld.", correct: false },
+                { text: "Auf gar keinen Fall, das ist ein Witz!", correct: true },
+                { text: "Ich muss erst meine Frau fragen.", correct: false }
+            ],
+            explanation: "Exakt. In diesem Kontext bedeutet es 'Träum weiter!'"
+        },
+        {
+            situation: "Dein Chef sagt: „Arbeiten Sie heute bitte bis Mitternacht.“ Du murmelst zu deinem Kollegen: <span class='russian-quote'>„Ага сейчас...“</span>",
+            question: "Was drückst du gegenüber dem Kollegen aus?",
+            options: [
+                { text: "Zustimmung zur Überstunde.", correct: false },
+                { text: "Dass du den Chef nicht verstanden hast.", correct: false },
+                { text: "Deinen Unmut und dass du nicht vorhast, so lange zu bleiben.", correct: true }
+            ],
+            explanation: "Genau. Es ist ein Ausdruck von leisem Protest oder Ironie."
+        },
+        {
+            situation: "Deine Mutter ruft: „Räum sofort dein Zimmer auf!“ Du bist am Zocken und rufst: <span class='russian-quote'>„Ага сейчас.“</span>",
+            question: "Was passiert als Nächstes?",
+            options: [
+                { text: "Du spielst weiter und ignorierst die Aufforderung.", correct: true },
+                { text: "Du lässt den Controller sofort fallen.", correct: false },
+                { text: "Du bedankst dich für die Erinnerung.", correct: false }
+            ],
+            explanation: "Richtig. Es ist die klassische 'Ja, ja... gleich (also nie)'-Reaktion."
+        }
+    ];
+
+    let currentQ = 0;
+    let score = 0;
+
+    function loadQuestion() {
+        const q = questions[currentQ];
+        document.getElementById('situation-text').innerHTML = q.situation;
+        document.getElementById('question-text').innerText = q.question;
+        document.getElementById('progress').style.width = ((currentQ + 1) / questions.length * 100) + "%";
+        
+        const optionsDiv = document.getElementById('options');
+        optionsDiv.innerHTML = '';
+        q.options.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt.text;
+            btn.onclick = () => checkAnswer(index, btn);
+            optionsDiv.appendChild(btn);
+        });
+
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+    }
+
+    function checkAnswer(index, btn) {
+        const q = questions[currentQ];
+        const buttons = document.querySelectorAll('.option-btn');
+        const feedback = document.getElementById('feedback');
+        
+        buttons.forEach(b => b.classList.add('disabled'));
+        
+        if (q.options[index].correct) {
+            btn.classList.add('correct');
+            feedback.innerHTML = q.explanation;
+            feedback.className = "feedback-area correct";
+            score++;
+        } else {
+            btn.classList.add('wrong');
+            feedback.innerHTML = "Nicht ganz. Denk daran: Es ist fast immer sarkastisch gemeint!";
+            feedback.className = "feedback-area wrong";
+            // Zeige richtige Lösung
+            buttons.forEach((b, i) => { if(q.options[i].correct) b.classList.add('correct'); });
+        }
+        
+        feedback.style.display = 'block';
+        document.getElementById('next-btn').style.display = 'block';
+        if (currentQ === questions.length - 1) {
+            document.getElementById('next-btn').innerText = "Ergebnis sehen";
+        }
+    }
+
+    function nextQuestion() {
+        currentQ++;
+        if (currentQ < questions.length) {
+            loadQuestion();
+        } else {
+            showResult();
+        }
+    }
+
+    function showResult() {
+        const card = document.getElementById('quiz-content');
+        card.innerHTML = `
+            <h2>Quiz beendet!</h2>
+            <p>Du hast ${score} von ${questions.length} Situationen richtig eingeschätzt.</p>
+            <p><strong>Fazit:</strong> Wenn du im Russischen "Ага сейчас" hörst, kannst du dir sicher sein: Es passiert wahrscheinlich nicht!</p>
+            <button class="next-btn" style="display:block" onclick="location.reload()">Neustart</button>
+        `;
+    }
+
+    loadQuestion();
+</script>
+
+</body>
+</html>
