@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Quiz: Wahr oder Falsch</title>
+    <style>
+        :root {
+            --primary: #0056b3;
+            --success: #28a745;
+            --error: #dc3545;
+            --bg: #f4f7f6;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .quiz-card {
+            background: var(--card);
+            max-width: 500px;
+            width: 100%;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .statement-box {
+            min-height: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #eee;
+        }
+
+        .statement-text {
+            font-size: 1.25rem;
+            line-height: 1.4;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 18px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            color: white;
+        }
+
+        .btn:active { transform: scale(0.96); }
+
+        .btn-wahr { background-color: var(--success); }
+        .btn-falsch { background-color: var(--error); }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .feedback {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+            text-align: left;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .feedback-title {
+            display: block;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .next-btn {
+            margin-top: 20px;
+            width: 100%;
+            padding: 15px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: none;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 400px) {
+            .btn-container {
+                flex-direction: column;
+            }
+            .statement-text {
+                font-size: 1.1rem;
+            }
+            .quiz-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-card">
+    <div class="progress" id="counter">Frage 1 von 3</div>
+    <div class="statement-box">
+        <div class="statement-text" id="statement">Bedeutet das Wort сейчас in diesem Kontext immer, dass die Handlung in der nächsten Sekunde beginnt?</div>
+    </div>
+
+    <div class="btn-container">
+        <button class="btn btn-wahr" id="btn-w" onclick="handleAnswer(true)">WAHR</button>
+        <button class="btn btn-falsch" id="btn-f" onclick="handleAnswer(false)">FALSCH</button>
+    </div>
+
+    <div id="feedback" class="feedback">
+        <span class="feedback-title" id="fb-title">Richtig!</span>
+        <span id="fb-text">Genau. In der Wendung "Ага сейчас" bedeutet es ironischerweise meistens "nie".</span>
+    </div>
+
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()">Nächste Frage</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            text: 'Bedeutet das Wort сейчас in diesem Kontext immer, dass die Handlung in der nächsten Sekunde beginnt?',
+            correct: false,
+            feedback: 'Genau. In der Wendung "Ага jetzt" bedeutet es ironischerweise meistens, dass die Handlung gar nicht stattfindet.'
+        },
+        {
+            text: 'Der Ausdruck "Ага сейчас" ist eine höfliche und formelle Art, eine Bitte abzulehnen.',
+            correct: false,
+            feedback: 'Falsch. Es ist sehr umgangssprachlich und sarkastisch. In formellen Situationen wäre es unhöflich.'
+        },
+        {
+            text: 'Das Wort "Ага" wird in der Alltagssprache oft als Bestätigung (wie "Ja" oder "Aha") genutzt.',
+            correct: true,
+            feedback: 'Richtig! "Ага" ist eine sehr verbreitete, lockere Form der Zustimmung im russischen Alltag.'
+        }
+    ];
+
+    let currentIdx = 0;
+
+    function handleAnswer(userAnswer) {
+        const q = questions[currentIdx];
+        const feedbackDiv = document.getElementById('feedback');
+        const fbTitle = document.getElementById('fb-title');
+        const fbText = document.getElementById('fb-text');
+        const nextBtn = document.getElementById('next-btn');
+
+        document.getElementById('btn-w').disabled = true;
+        document.getElementById('btn-f').disabled = true;
+
+        feedbackDiv.style.display = 'block';
+        nextBtn.style.display = 'block';
+
+        if (userAnswer === q.correct) {
+            feedbackDiv.style.backgroundColor = '#d4edda';
+            feedbackDiv.style.color = '#155724';
+            fbTitle.innerText = "Richtig!";
+        } else {
+            feedbackDiv.style.backgroundColor = '#f8d7da';
+            feedbackDiv.style.color = '#721c24';
+            fbTitle.innerText = "Nicht ganz...";
+        }
+        fbText.innerText = q.feedback;
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            // Update UI für neue Frage
+            document.getElementById('counter').innerText = `Frage ${currentIdx + 1} von ${questions.length}`;
+            document.getElementById('statement').innerText = questions[currentIdx].text;
+            document.getElementById('feedback').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('btn-w').disabled = false;
+            document.getElementById('btn-f').disabled = false;
+        } else {
+            // Ende des Quiz
+            document.querySelector('.quiz-card').innerHTML = `
+                <h2>Quiz abgeschlossen!</h2>
+                <p>Du hast nun ein besseres Verständnis für russischen Sarkasmus.</p>
+                <button class="next-btn" style="display:block" onclick="location.reload()">Neustart</button>
+            `;
+        }
+    }
+</script>
+
+</body>
+</html>
