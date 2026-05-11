@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji-Quiz: Russische Ironie</title>
+    <style>
+        :root {
+            --primary: #0056b3;
+            --success: #28a745;
+            --error: #dc3545;
+            --bg: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .quiz-card {
+            background: white;
+            max-width: 500px;
+            width: 100%;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #eee;
+            border-radius: 3px;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 33%;
+            transition: width 0.3s;
+            border-radius: 3px;
+        }
+
+        .phrase-display {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .instruction {
+            margin-bottom: 25px;
+            color: #444;
+            font-weight: 500;
+        }
+
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .emoji-option {
+            border: 2px solid #dee2e6;
+            border-radius: 15px;
+            padding: 20px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .emoji-option:hover:not(.disabled) {
+            border-color: var(--primary);
+            background: #f0f7ff;
+            transform: translateY(-3px);
+        }
+
+        .emoji-icon {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .disabled { pointer-events: none; }
+        .correct { border-color: var(--success) !important; background: #e9f7ef !important; }
+        .wrong { border-color: var(--error) !important; background: #fdf2f2 !important; }
+
+        .feedback {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-weight: bold;
+            display: none;
+            line-height: 1.4;
+        }
+
+        .next-btn {
+            display: none;
+            width: 100%;
+            background: #333;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        @media (max-width: 400px) {
+            .emoji-icon { font-size: 2.2rem; }
+            .phrase-display { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-card">
+    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+    
+    <div class="instruction" id="instr">Welcher Gesichtsausdruck passt zu dieser Bedeutung?</div>
+    <div class="phrase-display" id="phrase">Ага сейчас</div>
+
+    <div class="emoji-grid" id="emoji-grid">
+        <!-- Inhalte werden per JS geladen -->
+    </div>
+
+    <div id="feedback" class="feedback"></div>
+    <button id="next-btn" class="next-btn" onclick="nextTask()">Nächste Aufgabe</button>
+</div>
+
+<script>
+    const tasks = [
+        {
+            phrase: "Ага сейчас",
+            context: "(Sarkastische Ablehnung: „Von wegen!“)",
+            options: [
+                { emoji: "🤩", correct: false, desc: "Zu begeistert!" },
+                { emoji: "🙄", correct: true, desc: "Richtig! Das Augenrollen drückt den Sarkasmus perfekt aus." },
+                { emoji: "😐", correct: false, desc: "Zu sachlich." }
+            ]
+        },
+        {
+            phrase: "Ага",
+            context: "(Umgangssprachliches „Ja“ / „Aha“)",
+            options: [
+                { emoji: "🤔", correct: false, desc: "Das ist eher nachdenklich." },
+                { emoji: "👌", correct: true, desc: "Genau! Ein einfaches, bestätigendes Einverständnis." },
+                { emoji: "😭", correct: false, desc: "Viel zu traurig!" }
+            ]
+        },
+        {
+            phrase: "сейчас",
+            context: "(Wörtliche Bedeutung: „Sofort / Jetzt“)",
+            options: [
+                { emoji: "😴", correct: false, desc: "Das wäre das Gegenteil von sofort!" },
+                { emoji: "🥳", correct: false, desc: "Das ist reine Feierlaune." },
+                { emoji: "🏃", correct: true, desc: "Richtig! Es drückt Eile oder den Beginn einer Handlung aus." }
+            ]
+        }
+    ];
+
+    let currentStep = 0;
+
+    function loadTask() {
+        const task = tasks[currentStep];
+        document.getElementById('phrase').innerText = task.phrase;
+        document.getElementById('instr').innerHTML = `Welcher Ausdruck passt zu: <br><strong>${task.context}</strong>`;
+        document.getElementById('progress').style.width = ((currentStep + 1) / tasks.length * 100) + "%";
+        
+        const grid = document.getElementById('emoji-grid');
+        grid.innerHTML = '';
+        
+        task.options.forEach((opt, index) => {
+            const div = document.createElement('div');
+            div.className = 'emoji-option';
+            div.innerHTML = `<span class="emoji-icon">${opt.emoji}</span>`;
+            div.onclick = () => checkAnswer(index, div);
+            grid.appendChild(div);
+        });
+
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+    }
+
+    function checkAnswer(idx, element) {
+        const task = tasks[currentStep];
+        const feedback = document.getElementById('feedback');
+        const options = document.querySelectorAll('.emoji-option');
+
+        options.forEach(opt => opt.classList.add('disabled'));
+
+        feedback.style.display = 'block';
+        if (task.options[idx].correct) {
+            element.classList.add('correct');
+            feedback.style.background = '#d4edda';
+            feedback.style.color = '#155724';
+            feedback.innerHTML = task.options[idx].desc;
+        } else {
+            element.classList.add('wrong');
+            feedback.style.background = '#f8d7da';
+            feedback.style.color = '#721c24';
+            feedback.innerHTML = "Nicht ganz. " + task.options[idx].desc;
+            // Richtige Lösung markieren
+            options.forEach((opt, i) => {
+                if (task.options[i].correct) opt.classList.add('correct');
+            });
+        }
+
+        document.getElementById('next-btn').style.display = 'block';
+        if (currentStep === tasks.length - 1) {
+            document.getElementById('next-btn').innerText = "Quiz beendet - Neustart";
+        }
+    }
+
+    function nextTask() {
+        currentStep++;
+        if (currentStep < tasks.length) {
+            loadTask();
+        } else {
+            currentStep = 0;
+            loadTask();
+            document.getElementById('next-btn').innerText = "Nächste Aufgabe";
+        }
+    }
+
+    // Initial laden
+    loadTask();
+</script>
+
+</body>
+</html>
