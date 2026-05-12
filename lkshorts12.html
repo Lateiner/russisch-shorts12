@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lernkartei: Nuancen & Sarkasmus</title>
+    <style>
+        :root {
+            --bg-color: #f0f7f0;
+            --primary-green: #2d5a27;
+            --light-green: #e8f5e9;
+            --accent-green: #4caf50;
+            --card-front: #ffffff;
+            --card-back: #f1f8e9;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            color: var(--primary-green);
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .progress {
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: var(--primary-green);
+        }
+
+        /* 3D Card Flip Style */
+        .card-scene {
+            width: 100%;
+            height: 300px;
+            perspective: 1000px;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border-radius: 15px;
+        }
+
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid var(--primary-green);
+        }
+
+        .card-front {
+            background-color: var(--card-front);
+            color: var(--primary-green);
+            font-weight: bold;
+        }
+
+        .card-back {
+            background-color: var(--card-back);
+            transform: rotateY(180deg);
+            color: #1b5e20;
+        }
+
+        .vocab-text {
+            word-wrap: break-word;
+            line-height: 1.2;
+        }
+
+        /* Controls */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .btn {
+            background-color: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-green);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-full {
+            grid-column: span 2;
+        }
+
+        .keyboard-hint {
+            margin-top: 25px;
+            font-size: 0.8rem;
+            color: #666;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 480px) {
+            .card-scene {
+                height: 250px;
+            }
+            .btn {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Russisch-Kartei</h1>
+
+    <div class="container">
+        <div class="progress" id="progress">1 / 60</div>
+
+        <div class="card-scene" onclick="flipCard()">
+            <div class="card" id="card">
+                <div class="card-face card-front">
+                    <div class="vocab-text" id="front-text">Vorderseite</div>
+                </div>
+                <div class="card-face card-back">
+                    <div class="vocab-text" id="back-text">Rückseite</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="prevCard()">← Vorherige</button>
+            <button class="btn" onclick="nextCard()">Nächste →</button>
+            <button class="btn btn-full" onclick="shuffleCards()">🔀 Mischen</button>
+            <button class="btn btn-full" onclick="goToStart()">🏠 An den Anfang</button>
+        </div>
+
+        <div class="keyboard-hint">
+            Tastatur: ← / → Navigation | Leertaste / Enter: Umdrehen | Pos1: Anfang
+        </div>
+    </div>
+
+    <script>
+        // Vokabelliste basierend auf deiner Vorlage
+        const originalVocab = [
+            {f: "да", b: "ja"},
+            {f: "ага", b: "ja, aha (umgangssprachlich)"},
+            {f: "ага сейчас", b: "von wegen, denkst du ja gar nicht dran (sarkastisch)"},
+            {f: "конечно", b: "natürlich"},
+            {f: "хорошо", b: "gut, okay"},
+            {f: "ну да", b: "na klar, offensichtlich"},
+            {f: "да нет", b: "eher nicht, ich glaube nicht"},
+            {f: "обязательно", b: "unbedingt, auf jeden Fall"},
+            {f: "делать / сделать", b: "tun, machen"},
+            {f: "мочь / смочь", b: "können"},
+            {f: "идти / пойти", b: "gehen"},
+            {f: "ехать / поехать", b: "fahren"},
+            {f: "подвозить / подвезти", b: "(mit dem Auto) bringen, fahren"},
+            {f: "помогать / помочь", b: "helfen"},
+            {f: "бегать / побежать", b: "laufen, joggen"},
+            {f: "готовѝть / подготовить", b: "vorbereiten"},
+            {f: "убирать / убрать", b: "aufräumen"},
+            {f: "работать / поработать", b: "arbeiten"},
+            {f: "думать / подумать", b: "denken, überlegen"},
+            {f: "спать / поспать", b: "schlafen"},
+            {f: "дарить / подарить", b: "schenken"},
+            {f: "бронировать / забронировать", b: "reservieren"},
+            {f: "завтра", b: "morgen"},
+            {f: "сегодня", b: "heute"},
+            {f: "сейчас", b: "jetzt, gleich"},
+            {f: "утро", b: "der Morgen"},
+            {f: "вечер", b: "der Abend"},
+            {f: "рано", b: "früh"},
+            {f: "поздно", b: "spät"},
+            {f: "парк", b: "der Park"},
+            {f: "аэропорт", b: "der Flughafen"},
+            {f: "машина", b: "das Auto"},
+            {f: "бензин", b: "das Benzin"},
+            {f: "отчёт", b: "der Bericht"},
+            {f: "документ", b: "das Dokument"},
+            {f: "заказ", b: "die Bestellung"},
+            {f: "комната", b: "das Zimmer"},
+            {f: "коробка", b: "der Karton, die Kiste"},
+            {f: "экзамен", b: "die Prüfung"},
+            {f: "переезд", b: "der Umzug"},
+            {f: "море", b: "das Meer"},
+            {f: "выходные", b: "das Wochenende"},
+            {f: "пицца", b: "die Pizza"},
+            {f: "глупость", b: "die Dummheit, die Schnapsidee"},
+            {f: "сарказм", b: "der Sarkasmus"},
+            {f: "вежливый", b: "höflich"},
+            {f: "грубый", b: "grob, unhöflich"},
+            {f: "ироничный", b: "ironisch"},
+            {f: "сложный", b: "schwierig, kompliziert"},
+            {f: "быстро", b: "schnell"},
+            {f: "спасибо", b: "danke"},
+            {f: "привет", b: "hallo, hi"},
+            {f: "пожалуйста", b: "bitte"},
+            {f: "понятно", b: "verstanden, klar"},
+            {f: "правда", b: "die Wahrheit, echt"},
+            {f: "честно", b: "ehrlich"},
+            {f: "молодец", b: "gut gemacht (Lob an eine Person)"},
+            {f: "дурак", b: "der Dumme"},
+            {f: "наверное", b: "wahrscheinlich"},
+            {f: "вместе", b: "gemeinsam"}
+        ];
+
+        let cards = [...originalVocab];
+        let currentIndex = 0;
+        const cardElement = document.getElementById('card');
+        const frontText = document.getElementById('front-text');
+        const backText = document.getElementById('back-text');
+        const progressText = document.getElementById('progress');
+
+        function updateCard() {
+            // Karte zurückdrehen bevor Text gewechselt wird
+            cardElement.classList.remove('is-flipped');
+            
+            setTimeout(() => {
+                const current = cards[currentIndex];
+                frontText.innerText = current.f;
+                backText.innerText = current.b;
+                progressText.innerText = `${currentIndex + 1} / ${cards.length}`;
+                
+                // Dynamische Schriftgröße
+                adjustFontSize(frontText);
+                adjustFontSize(backText);
+            }, 100);
+        }
+
+        function adjustFontSize(element) {
+            const length = element.innerText.length;
+            if (length > 40) {
+                element.style.fontSize = "1.2rem";
+            } else if (length > 20) {
+                element.style.fontSize = "1.5rem";
+            } else {
+                element.style.fontSize = "2rem";
+            }
+        }
+
+        function flipCard() {
+            cardElement.classList.toggle('is-flipped');
+        }
+
+        function nextCard() {
+            if (currentIndex < cards.length - 1) {
+                currentIndex++;
+                updateCard();
+            } else {
+                // Animation für "Ende erreicht"
+                cardElement.style.transform = "translateX(10px)";
+                setTimeout(() => cardElement.style.transform = "", 100);
+            }
+        }
+
+        function prevCard() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateCard();
+            }
+        }
+
+        function shuffleCards() {
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cards[i], cards[j]] = [cards[j], cards[i]];
+            }
+            currentIndex = 0;
+            updateCard();
+        }
+
+        function goToStart() {
+            currentIndex = 0;
+            updateCard();
+        }
+
+        // Tastatursteuerung
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                case 'Enter':
+                    e.preventDefault(); // Verhindert Scrollen bei Leertaste
+                    flipCard();
+                    break;
+                case 'ArrowRight':
+                    nextCard();
+                    break;
+                case 'ArrowLeft':
+                    prevCard();
+                    break;
+                case 'Home':
+                    goToStart();
+                    break;
+            }
+        });
+
+        // Initialisierung
+        updateCard();
+    </script>
+</body>
+</html>
