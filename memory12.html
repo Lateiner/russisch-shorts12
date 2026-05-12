@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory: Kontext & Bedeutung</title>
+    <style>
+        :root {
+            --primary: #1a3a5f;
+            --accent: #4a90e2;
+            --success: #28a745;
+            --card-bg: #ffffff;
+            --bg: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            max-width: 600px;
+        }
+
+        .stats {
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 10px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 600px;
+            min-height: 300px; /* Verhindert das Springen des Layouts */
+        }
+
+        .card {
+            aspect-ratio: 4 / 3;
+            background-color: var(--primary);
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 10px;
+            font-size: 0.9rem;
+            color: transparent;
+            transition: transform 0.4s, background-color 0.3s, opacity 0.8s, visibility 0.8s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            user-select: none;
+            position: relative;
+        }
+
+        /* Rückseite der Karte (aktiv) */
+        .card.flipped {
+            background-color: var(--card-bg);
+            color: #333;
+            transform: rotateY(180deg);
+        }
+
+        .card span {
+            transform: rotateY(180deg);
+        }
+
+        /* Animation für gefundene Paare */
+        .card.matched {
+            background-color: var(--success) !important;
+            color: white !important;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .controls {
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .btn:active { transform: scale(0.95); }
+
+        @media (max-width: 480px) {
+            .memory-grid { grid-template-columns: repeat(2, 1fr); }
+            .card { font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2>Memory: Russische Nuancen</h2>
+    <p>Finde die Paare. Richtige Paare lösen sich auf!</p>
+    <div class="stats">
+        Versuche: <span id="moves">0</span> | Gefunden: <span id="matches">0</span>/6
+    </div>
+</div>
+
+<div class="memory-grid" id="grid"></div>
+
+<div class="controls">
+    <button class="btn" onclick="initGame()">Spiel neu starten</button>
+</div>
+
+<script>
+    const cardsData = [
+        { id: 1, text: "Ага", desc: "Umgangssprachliches 'Ja'" },
+        { id: 2, text: "Ага, сейчас!", desc: "Sarkasmus: 'Denkst du ja gar nicht dran!'" },
+        { id: 3, text: "Да, конечно", desc: "Höfliche, formelle Bestätigung" },
+        { id: 4, text: "Да нет vermutlich", desc: "Eher nicht / Ich glaube nicht" },
+        { id: 5, text: "Ну да", desc: "Bestätigung: 'Na klar / Offensichtlich'" },
+        { id: 6, text: "Нет, спасибо", desc: "Höfliche Ablehnung" }
+    ];
+
+    let flippedCards = [];
+    let matchedCount = 0;
+    let moves = 0;
+    let canClick = true;
+
+    function initGame() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        flippedCards = [];
+        matchedCount = 0;
+        moves = 0;
+        document.getElementById('moves').innerText = '0';
+        document.getElementById('matches').innerText = '0';
+
+        // Erstelle Paare (Russisch & Deutsch)
+        let deck = [];
+        cardsData.forEach(item => {
+            deck.push({ id: item.id, text: item.text });
+            deck.push({ id: item.id, text: item.desc });
+        });
+
+        // Mischen
+        deck.sort(() => Math.random() - 0.5);
+
+        deck.forEach(data => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.dataset.id = data.id;
+            card.innerHTML = `<span>${data.text}</span>`;
+            card.onclick = () => flipCard(card);
+            grid.appendChild(card);
+        });
+    }
+
+    function flipCard(card) {
+        if (!canClick || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+        card.classList.add('flipped');
+        flippedCards.push(card);
+
+        if (flippedCards.length === 2) {
+            moves++;
+            document.getElementById('moves').innerText = moves;
+            checkMatch();
+        }
+    }
+
+    function checkMatch() {
+        canClick = false;
+        const [c1, c2] = flippedCards;
+
+        if (c1.dataset.id === c2.dataset.id) {
+            // Match gefunden!
+            matchedCount++;
+            document.getElementById('matches').innerText = matchedCount;
+            
+            setTimeout(() => {
+                c1.classList.add('matched');
+                c2.classList.add('matched');
+                flippedCards = [];
+                canClick = true;
+                
+                if (matchedCount === cardsData.length) {
+                    setTimeout(() => alert('Hervorragend! Du hast alle Nuancen gemeistert.'), 1000);
+                }
+            }, 700); // Zeit zum Anschauen bevor sie verschwinden
+        } else {
+            // Kein Match
+            setTimeout(() => {
+                c1.classList.remove('flipped');
+                c2.classList.remove('flipped');
+                flippedCards = [];
+                canClick = true;
+            }, 1200);
+        }
+    }
+
+    initGame();
+</script>
+
+</body>
+</html>
