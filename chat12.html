@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat-Simulation: Russischer Sarkasmus</title>
+    <style>
+        :root {
+            --chat-bg: #e5ddd5;
+            --msg-in: #ffffff;
+            --msg-out: #dcf8c6;
+            --primary: #075e54;
+            --accent: #128c7e;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .phone-container {
+            width: 100%;
+            max-width: 450px;
+            height: 95vh;
+            background: var(--chat-bg);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 10;
+        }
+
+        .avatar {
+            width: 35px;
+            height: 35px;
+            background: #9ab;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .bubble {
+            max-width: 75%;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            position: relative;
+            animation: pop 0.3s ease-out;
+        }
+
+        @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .incoming { background: var(--msg-in); align-self: flex-start; border-top-left-radius: 2px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        .outgoing { background: var(--msg-out); align-self: flex-end; border-top-right-radius: 2px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+
+        .options-panel {
+            background: #f0f0f0;
+            padding: 15px;
+            border-top: 1px solid #ccc;
+        }
+
+        .tiles-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .option-tile {
+            background: white;
+            padding: 12px 8px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+
+        .option-tile:hover { background: #f9f9f9; }
+        .option-tile strong { display: block; color: var(--primary); margin-bottom: 2px; }
+
+        .status-bar { font-size: 0.75rem; text-align: center; color: #777; margin-bottom: 10px; }
+
+        #final-overlay {
+            position: absolute;
+            inset: 0;
+            background: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            z-index: 20;
+        }
+
+        .restart-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="phone-container">
+    <div class="chat-header">
+        <div class="avatar" id="contact-avatar">M</div>
+        <div>
+            <div style="font-weight: bold;" id="contact-name">Maxim</div>
+            <div style="font-size: 0.7rem; opacity: 0.9;">online</div>
+        </div>
+    </div>
+
+    <div class="chat-messages" id="chat-window">
+        <!-- Dialoge erscheinen hier -->
+    </div>
+
+    <div id="typing-indicator" class="status-bar" style="display:none;">Andrej tippt...</div>
+
+    <div class="options-panel" id="input-panel">
+        <div class="tiles-container">
+            <div class="option-tile" onclick="handleChoice('irony')">
+                <strong>Ага сейчас</strong>
+                <span>(Sarkasmus)</span>
+            </div>
+            <div class="option-tile" onclick="handleChoice('da')">
+                <strong>Да, конечно</strong>
+                <span>(Zustimmung)</span>
+            </div>
+            <div class="option-tile" onclick="handleChoice('net')">
+                <strong>Нет, спасибо</strong>
+                <span>(Ablehnung)</span>
+            </div>
+            <div class="option-tile" onclick="handleChoice('aga')">
+                <strong>Ага</strong>
+                <span>(Lockeres Ja)</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="final-overlay">
+        <h2>Geschafft! 🎉</h2>
+        <p>Du hast alle 5 Situationen gemeistert und den russischen Sarkasmus (und die Höflichkeit) richtig eingesetzt.</p>
+        <button class="restart-btn" onclick="location.reload()">Nochmal starten</button>
+    </div>
+</div>
+
+<script>
+    const scenarios = [
+        {
+            name: "Maxim",
+            avatar: "M",
+            msg: "Kommst du morgen um 5 Uhr morgens zum Joggen in den Park?",
+            correct: "irony",
+            reaction: "Haha, dachte ich mir schon. 😴",
+            fail: "Echt jetzt? Du bist ja wahnsinnig fleißig! 😮"
+        },
+        {
+            name: "Lena",
+            avatar: "L",
+            msg: "Kannst du mir heute beim Umzug helfen? Es sind nur 40 Kisten im 5. Stock...",
+            correct: "irony",
+            reaction: "Schade... aber verständlich. 📦",
+            fail: "Super! Dann bis gleich, ich hab schon mal angefangen! 💪"
+        },
+        {
+            name: "Chef (Boris)",
+            avatar: "B",
+            msg: "Könnten Sie bitte noch die Dokumente für morgen vorbereiten?",
+            correct: "da",
+            reaction: "Vielen Dank für Ihren Einsatz! 👍",
+            fail: "Ähm... ist das Ihr Ernst? Wir sprechen uns morgen im Büro. 🤨"
+        },
+        {
+            name: "Sascha",
+            avatar: "S",
+            msg: "Hey, gehen wir heute Abend eine Pizza essen? 🍕",
+            correct: "aga",
+            reaction: "Top, ich reserviere einen Tisch! 🚀",
+            fail: "Warum so sarkastisch? Ich wollte doch nur Pizza... 😢"
+        },
+        {
+            name: "Anna",
+            avatar: "A",
+            msg: "Gibst du mir dein neues Auto für das Wochenende? Ich will ans Meer fahren!",
+            correct: "irony",
+            reaction: "War ein Versuch wert! 😂",
+            fail: "Wow, du bist der beste Freund der Welt! Ich fahr vorsichtig! 🚗💨"
+        }
+    ];
+
+    let currentIdx = 0;
+    const chatWindow = document.getElementById('chat-window');
+
+    function addMessage(text, type) {
+        const bubble = document.createElement('div');
+        bubble.className = `bubble ${type}`;
+        bubble.innerText = text;
+        chatWindow.appendChild(bubble);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function loadScenario() {
+        if (currentIdx >= scenarios.length) {
+            document.getElementById('final-overlay').style.display = 'flex';
+            return;
+        }
+        const s = scenarios[currentIdx];
+        document.getElementById('contact-name').innerText = s.name;
+        document.getElementById('contact-avatar').innerText = s.avatar;
+        
+        setTimeout(() => {
+            addMessage(s.msg, 'incoming');
+            document.getElementById('input-panel').style.pointerEvents = 'auto';
+            document.getElementById('input-panel').style.opacity = '1';
+        }, 800);
+    }
+
+    function handleChoice(choice) {
+        const s = scenarios[currentIdx];
+        document.getElementById('input-panel').style.pointerEvents = 'none';
+        document.getElementById('input-panel').style.opacity = '0.5';
+
+        // User Nachricht anzeigen
+        const choiceMap = {
+            'irony': 'Ага сейчас',
+            'da': 'Да, конечно',
+            'net': 'Нет, спасибо',
+            'aga': 'Ага'
+        };
+        addMessage(choiceMap[choice], 'outgoing');
+
+        // Reaktion des Kontakts
+        const indicator = document.getElementById('typing-indicator');
+        setTimeout(() => {
+            indicator.style.display = 'block';
+            setTimeout(() => {
+                indicator.style.display = 'none';
+                if (choice === s.correct) {
+                    addMessage(s.reaction, 'incoming');
+                } else {
+                    addMessage(s.fail, 'incoming');
+                }
+                
+                // Nächstes Szenario vorbereiten
+                currentIdx++;
+                setTimeout(() => {
+                    if (currentIdx < scenarios.length) {
+                        addMessage("--- Nächster Chat ---", "status-bar");
+                        loadScenario();
+                    } else {
+                        loadScenario();
+                    }
+                }, 1500);
+
+            }, 1500);
+        }, 500);
+    }
+
+    // Initialstart
+    loadScenario();
+</script>
+
+</body>
+</html>
